@@ -2,7 +2,7 @@
 
 ## 0.1 本阶段学习目标
 
-本阶段主要完成深度学习正式学习前的基础准备，包括 Linux 开发环境搭建、Linux 基础命令学习、Conda/CUDA/cuDNN 环境了解、计算机网络基础复习、代理网络配置以及 Git/GitHub 的使用。
+本阶段主要完成深度学习正式学习前的基础准备，包括 Linux 开发环境搭建、Linux 基础命令学习、Conda/CUDA/cuDNN 环境了解、计算机网络基础复习、代理网络配置、Git/GitHub 的使用，以及云端 GPU 环境的初步使用。
 
 通过本阶段学习，希望能够具备以下能力：
 
@@ -11,7 +11,9 @@
 3. 能够掌握 Linux 常用目录、文件操作命令；
 4. 能够理解公网、局域网、子网划分和服务器间数据传输的基本思路；
 5. 能够通过代理让 WSL Ubuntu 访问 GitHub 等外网资源；
-6. 能够使用 Git 记录 Markdown 学习笔记，并上传到 GitHub。
+6. 能够使用 Git 记录 Markdown 学习笔记，并上传到 GitHub；
+7. 能够理解本机 CPU/核显与 NVIDIA GPU 的区别；
+8. 能够使用 AutoDL 云端 GPU 实例运行 PyTorch CUDA 代码。
 
 ---
 
@@ -503,7 +505,7 @@ ls -R AA
 
 ## 2.1 当前完成情况
 
-本部分目前还未完整完成。后续需要继续学习并记录 Conda、CUDA、cuDNN 的安装和配置过程。
+本部分目前还未完整完成。后续需要继续学习并记录 Conda 的本地安装和配置过程。
 
 目前已经了解的内容如下：
 
@@ -512,21 +514,67 @@ ls -R AA
 - cuDNN 是 NVIDIA 针对深度学习的 GPU 加速库；
 - PyTorch、TensorFlow 等深度学习框架在使用 NVIDIA GPU 训练时，通常需要 CUDA/cuDNN 支持。
 
+---
+
 ## 2.2 本机硬件情况说明
 
-本机为联想 Windows 电脑，使用 Intel 显卡，不具备 NVIDIA CUDA 环境。因此，本机无法按照常规教程配置 CUDA/cuDNN GPU 加速环境。
+通过 Windows 任务管理器查看，本机 GPU 为：
 
-本地环境主要用于：
+```text
+Intel(R) Iris(R) Xe Graphics
+```
+
+该显卡属于 Intel 核显，不是 NVIDIA 独立显卡。虽然 Intel Iris Xe Graphics 也属于 GPU，但它不支持 NVIDIA CUDA/cuDNN 生态。
+
+深度学习课程中常见的 CUDA 和 cuDNN 主要用于 NVIDIA GPU 加速训练。因此，本机不具备本地配置 CUDA/cuDNN 的条件。
+
+任务管理器中显示的共享 GPU 内存并不是独立显存，而是核显临时借用的系统内存。因此，本机更适合用于：
 
 1. Linux 基础学习；
 2. Python 基础学习；
 3. Git 和 GitHub 使用；
 4. VS Code 开发环境熟悉；
-5. 小规模 CPU 代码调试。
+5. Conda 环境管理；
+6. CPU 版 PyTorch 学习；
+7. 小规模代码调试。
 
 后续如果需要进行 Transformer、VLM 等深度学习模型训练，应使用实验室服务器或云端 NVIDIA GPU 服务器完成。
 
-## 2.3 后续计划
+---
+
+## 2.3 当前学习阶段是否必须使用 CUDA/cuDNN
+
+当前主要学习内容包括：
+
+- Linux 基础；
+- Python 基础；
+- Git 与 GitHub；
+- 李沐《动手学深度学习》课程；
+- PyTorch 基础；
+- 论文阅读。
+
+这些内容在入门阶段并不是必须依赖 CUDA/cuDNN。对于线性回归、softmax 回归、多层感知机、小规模 CNN 等内容，CPU 环境也可以完成学习和调试。
+
+CUDA/cuDNN 更适合在后续训练较大模型时使用，例如：
+
+- ResNet；
+- Transformer；
+- BERT；
+- ViT；
+- VLM；
+- 大规模数据训练；
+- 论文复现中的完整训练实验。
+
+因此，当前阶段的策略是：
+
+```text
+本机 WSL Ubuntu + VS Code + Conda + CPU 版 PyTorch
+云端 AutoDL GPU + CUDA + PyTorch 用于需要 GPU 的实验
+```
+
+---
+
+## 2.4 后续计划
 
 后续需要继续完成：
 
@@ -534,7 +582,8 @@ ls -R AA
 2. Conda 创建虚拟环境；
 3. Conda 环境激活与退出；
 4. CPU 版本 PyTorch 安装；
-5. 如果有服务器，再学习 CUDA/cuDNN 版本匹配与 GPU 环境检查。
+5. 在云端 GPU 上学习 CUDA/PyTorch 环境检查；
+6. 在 VS Code Remote-SSH 中运行 GPU 代码。
 
 示例命令：
 
@@ -553,7 +602,7 @@ print(torch.__version__)
 print(torch.cuda.is_available())
 ```
 
-如果输出 `False`，说明当前没有检测到 CUDA GPU，这对于本机 Intel 显卡环境是正常情况。
+如果输出 `False`，说明当前没有检测到 CUDA GPU，这对于本机 Intel 核显环境是正常情况。
 
 ---
 
@@ -1163,15 +1212,604 @@ cd ~/dl-learning-notes
 
 ---
 
-# 6. Chapter 0 当前完成情况总结
+# 6. AutoDL 云端 GPU 环境配置与使用记录
+
+## 6.1 使用云端 GPU 的原因
+
+本机显卡为 Intel Iris Xe 核显，没有 NVIDIA 独立显卡，因此无法在本地配置 CUDA/cuDNN GPU 深度学习环境。
+
+为了后续学习李沐《动手学深度学习》、PyTorch、论文复现和深度学习模型训练，本阶段尝试使用 AutoDL 云端 GPU 实例。这样可以实现：
+
+- 本地电脑不用安装 CUDA/cuDNN；
+- 云端服务器提供 NVIDIA GPU；
+- 云端镜像预装 PyTorch、CUDA 等深度学习环境；
+- 本地通过 SSH 或 VS Code Remote-SSH 连接云端服务器；
+- 代码实际在云端 GPU 上运行。
+
+---
+
+## 6.2 租用 AutoDL 云端 GPU 实例
+
+进入 AutoDL 官网并登录账号后，在算力市场中选择一台 GPU 实例。
+
+本次测试租用的云端实例配置如下：
+
+| 项目 | 配置 |
+|---|---|
+| 平台 | AutoDL |
+| 系统 | Ubuntu 22.04 |
+| GPU | NVIDIA GeForce RTX 4080 SUPER |
+| GPU 数量 | 1 |
+| CPU | 12 核 |
+| 内存 | 62 GB |
+| 系统盘 | 30 GB |
+| 数据盘 | 50 GB |
+| PyTorch | 2.3.0+cu121 |
+| CUDA | PyTorch 对应 CUDA 12.1，驱动显示 CUDA Version 13.2 |
+
+租用实例时选择按量计费。实例开机后，状态显示为“运行中”，此时开始计费。
+
+---
+
+## 6.3 SSH 登录云端服务器
+
+实例启动后，AutoDL 页面提供 SSH 登录指令和密码。
+
+本次使用的 SSH 登录指令格式为：
+
+```bash
+ssh -p 33984 root@connect.weste.seetacloud.com
+```
+
+在 Windows PowerShell 中输入该命令：
+
+```powershell
+ssh -p 33984 root@connect.weste.seetacloud.com
+```
+
+第一次连接时，终端提示：
+
+```text
+Are you sure you want to continue connecting (yes/no/[fingerprint])?
+```
+
+输入：
+
+```text
+yes
+```
+
+然后输入 AutoDL 页面提供的密码。密码输入过程中终端不会显示字符，这是正常现象。
+
+登录成功后，终端显示类似：
+
+```bash
+root@autodl-container-xxx:~#
+```
+
+说明已经进入云端 Linux 服务器。
+
+---
+
+## 6.4 AutoDL 目录说明
+
+登录后，AutoDL 提示了两个重要目录：
+
+| 目录 | 说明 |
+|---|---|
+| `/` | 系统盘，空间较小，适合放少量配置和代码 |
+| `/root/autodl-tmp` | 数据盘，读写速度快，适合存放代码、数据集和实验文件 |
+
+因此，本次将学习代码放在数据盘中：
+
+```bash
+mkdir -p /root/autodl-tmp/d2l-learning
+cd /root/autodl-tmp/d2l-learning
+```
+
+检查当前路径：
+
+```bash
+pwd
+```
+
+输出为：
+
+```bash
+/root/autodl-tmp/d2l-learning
+```
+
+---
+
+## 6.5 检查云端 GPU
+
+在云端服务器终端中输入：
+
+```bash
+nvidia-smi
+```
+
+输出结果显示服务器识别到：
+
+```text
+NVIDIA GeForce RTX 4080 SUPER
+```
+
+同时可以看到驱动版本和 CUDA Version，说明云端 NVIDIA GPU 可用。
+
+---
+
+## 6.6 检查 Conda 环境
+
+输入：
+
+```bash
+conda env list
+```
+
+输出显示：
+
+```text
+base    /root/miniconda3
+```
+
+说明云端镜像中已经安装了 Miniconda，并且当前存在 `base` 环境。
+
+---
+
+## 6.7 测试 PyTorch 是否可以调用 GPU
+
+首先进入 Python：
+
+```bash
+python
+```
+
+在 Python 交互环境中输入：
+
+```python
+import torch
+print(torch.__version__)
+print(torch.cuda.is_available())
+```
+
+输出结果为：
+
+```text
+2.3.0+cu121
+True
+```
+
+其中：
+
+- `2.3.0+cu121` 表示当前 PyTorch 版本为 2.3.0，并且是 CUDA 12.1 版本；
+- `True` 表示 PyTorch 可以检测并调用 CUDA GPU。
+
+退出 Python：
+
+```python
+exit()
+```
+
+---
+
+## 6.8 创建 GPU 测试脚本
+
+在 `/root/autodl-tmp/d2l-learning` 目录下创建测试文件：
+
+```bash
+cat > test_gpu.py <<'PY'
+import torch
+
+print("PyTorch version:", torch.__version__)
+print("CUDA available:", torch.cuda.is_available())
+
+if torch.cuda.is_available():
+    print("GPU name:", torch.cuda.get_device_name(0))
+    x = torch.randn(1000, 1000).cuda()
+    y = x @ x
+    print("Tensor device:", y.device)
+PY
+```
+
+运行测试脚本：
+
+```bash
+python test_gpu.py
+```
+
+输出结果为：
+
+```text
+PyTorch version: 2.3.0+cu121
+CUDA available: True
+GPU name: NVIDIA GeForce RTX 4080 SUPER
+Tensor device: cuda:0
+```
+
+该结果说明：
+
+1. PyTorch 已成功安装；
+2. CUDA 可以被 PyTorch 调用；
+3. GPU 为 NVIDIA GeForce RTX 4080 SUPER；
+4. 张量计算实际运行在 `cuda:0` 上。
+
+因此，云端 GPU 深度学习环境测试成功。
+
+---
+
+## 6.9 VS Code Remote-SSH 连接云端服务器
+
+为了实现在本地 VS Code 中写代码、在云端 GPU 上运行代码，需要使用 VS Code 的 Remote-SSH 插件。
+
+### 6.9.1 安装 Remote-SSH 插件
+
+在本地 Windows 的 VS Code 中打开扩展市场，搜索并安装：
+
+```text
+Remote - SSH
+```
+
+安装完成后，可以通过 VS Code 连接远程 Linux 服务器。
+
+### 6.9.2 添加 SSH 主机
+
+在 VS Code 中按：
+
+```text
+F1
+```
+
+搜索：
+
+```text
+Remote-SSH: Add New SSH Host
+```
+
+输入 AutoDL 提供的 SSH 指令：
+
+```bash
+ssh -p 33984 root@connect.weste.seetacloud.com
+```
+
+保存到默认 SSH 配置文件。
+
+### 6.9.3 连接远程主机
+
+再次按：
+
+```text
+F1
+```
+
+搜索：
+
+```text
+Remote-SSH: Connect to Host
+```
+
+选择：
+
+```text
+connect.weste.seetacloud.com
+```
+
+系统类型选择：
+
+```text
+Linux
+```
+
+然后输入 AutoDL 密码。
+
+连接成功后，VS Code 左下角会显示类似：
+
+```text
+SSH: connect.weste.seetacloud.com
+```
+
+此时 VS Code 已经连接到云端服务器。
+
+---
+
+## 6.10 VS Code Server 下载卡住问题处理
+
+第一次使用 VS Code Remote-SSH 连接时，可能会卡在：
+
+```text
+Downloading with wget
+```
+
+这是因为远程服务器下载 VS Code Server 较慢或失败。
+
+解决方法如下。
+
+首先，在 PowerShell 中登录云端服务器：
+
+```powershell
+ssh -p 33984 root@connect.weste.seetacloud.com
+```
+
+然后清理未安装完成的 VS Code Server：
+
+```bash
+rm -rf ~/.vscode-server
+```
+
+退出服务器：
+
+```bash
+exit
+```
+
+然后在本地 VS Code 中打开用户设置 JSON：
+
+```text
+Preferences: Open User Settings (JSON)
+```
+
+加入配置：
+
+```json
+"remote.SSH.localServerDownload": "always"
+```
+
+如果原文件为空，可以写成：
+
+```json
+{
+    "remote.SSH.localServerDownload": "always"
+}
+```
+
+该设置表示让本地 VS Code 下载 VS Code Server 后再上传到远程服务器，避免远程服务器直接下载卡住。
+
+保存后，重新使用 Remote-SSH 连接 AutoDL。
+
+---
+
+## 6.11 下次重新使用云端 GPU 的流程
+
+### 6.11.1 在 AutoDL 网页开机
+
+进入 AutoDL 控制台，找到该实例。如果状态为：
+
+```text
+已关机
+```
+
+点击：
+
+```text
+开机
+```
+
+等待状态变为：
+
+```text
+运行中
+```
+
+只有实例处于运行中时，才能通过 SSH 或 VS Code 连接服务器。需要注意，实例运行中会产生计费。
+
+---
+
+### 6.11.2 使用 PowerShell 登录服务器
+
+打开 Windows PowerShell，输入 AutoDL 提供的 SSH 登录命令：
+
+```powershell
+ssh -p 33984 root@connect.weste.seetacloud.com
+```
+
+然后输入 AutoDL 页面提供的密码。
+
+登录成功后，终端会显示类似：
+
+```bash
+root@autodl-container-xxx:~#
+```
+
+说明已经进入云端 Linux 服务器。
+
+---
+
+### 6.11.3 进入代码目录
+
+本次创建的代码目录位于数据盘：
+
+```bash
+/root/autodl-tmp/d2l-learning
+```
+
+下次登录服务器后，进入该目录：
+
+```bash
+cd /root/autodl-tmp/d2l-learning
+```
+
+检查当前路径：
+
+```bash
+pwd
+```
+
+如果输出为：
+
+```bash
+/root/autodl-tmp/d2l-learning
+```
+
+说明已经进入正确的代码目录。
+
+---
+
+### 6.11.4 检查 GPU 是否正常
+
+输入：
+
+```bash
+nvidia-smi
+```
+
+如果可以看到 NVIDIA GeForce RTX 4080 SUPER 等显卡信息，说明云端 GPU 正常。
+
+---
+
+### 6.11.5 运行测试脚本
+
+运行之前创建的 GPU 测试文件：
+
+```bash
+python test_gpu.py
+```
+
+如果输出中包含：
+
+```text
+CUDA available: True
+Tensor device: cuda:0
+```
+
+说明 PyTorch 可以正常调用云端 GPU。
+
+---
+
+### 6.11.6 使用 VS Code 重新连接云端服务器
+
+如果需要在 VS Code 中写代码，可以打开本地 VS Code，按：
+
+```text
+F1
+```
+
+搜索：
+
+```text
+Remote-SSH: Connect to Host
+```
+
+选择：
+
+```text
+connect.weste.seetacloud.com
+```
+
+输入 AutoDL 密码。
+
+连接成功后，VS Code 左下角会显示类似：
+
+```text
+SSH: connect.weste.seetacloud.com
+```
+
+然后打开云端代码文件夹：
+
+```text
+/root/autodl-tmp/d2l-learning
+```
+
+之后就可以在 VS Code 中创建、修改 Python 文件，并在 VS Code 的远程终端中运行代码。
+
+---
+
+## 6.12 用完后的退出与关机
+
+### 6.12.1 退出 SSH
+
+如果是在 PowerShell 中连接服务器，使用完后输入：
+
+```bash
+exit
+```
+
+即可退出远程服务器，回到本地 PowerShell。
+
+### 6.12.2 关闭 VS Code 远程连接
+
+如果 VS Code 正在连接远程服务器，可以直接关闭远程窗口，也可以按：
+
+```text
+F1
+```
+
+搜索：
+
+```text
+Remote-SSH: Close Remote Connection
+```
+
+关闭远程连接。
+
+### 6.12.3 回 AutoDL 网页关机
+
+需要特别注意：
+
+```text
+退出 PowerShell 或关闭 VS Code，并不会停止 AutoDL 实例计费。
+```
+
+真正停止主要 GPU 计算费用，需要回到 AutoDL 网页，在实例页面点击：
+
+```text
+关机
+```
+
+等待实例状态变成：
+
+```text
+已关机
+```
+
+这才说明主要 GPU 计算费用已经停止。
+
+因此，下次使用 AutoDL 云端 GPU 的完整流程可以总结为：
+
+```text
+AutoDL 网页开机
+→ PowerShell 或 VS Code 连接服务器
+→ cd /root/autodl-tmp/d2l-learning
+→ nvidia-smi 检查 GPU
+→ python test_gpu.py 测试 PyTorch
+→ 编写和运行代码
+→ exit 退出 SSH
+→ AutoDL 网页关机
+```
+
+---
+
+## 6.13 本部分学习理解
+
+通过本次实践，我理解了本地开发和云端 GPU 计算之间的关系。
+
+本地电脑主要负责：
+
+1. 打开 VS Code；
+2. 编辑代码；
+3. 通过 SSH 连接远程服务器；
+4. 保存学习笔记和管理 GitHub 仓库。
+
+云端服务器负责：
+
+1. 提供 NVIDIA GPU；
+2. 提供 CUDA/cuDNN/PyTorch 环境；
+3. 实际运行 Python 和深度学习代码；
+4. 执行需要 GPU 加速的训练和测试任务。
+
+因此，即使本机没有 NVIDIA 独立显卡，也可以通过 AutoDL 云端 GPU 实例完成深度学习实验。对于当前学习阶段，本地可以继续用于 Linux、Git、Python 基础学习，而涉及 GPU 的代码可以放到云端服务器运行。
+
+---
+
+# 7. Chapter 0 当前完成情况总结
 
 | 项目 | 当前状态 | 说明 |
 |---|---|---|
 | Linux 环境搭建 | 已完成 | 已安装 WSL Ubuntu，并能使用 Ubuntu 终端 |
 | VS Code 连接 Linux | 已完成 | 可通过 `code .` 打开 Linux 文件夹 |
 | Linux 基础指令学习 | 进行中 | 已学习目录、路径、文件创建、删除、复制、移动等基础命令，后续继续补充 |
-| Conda 环境搭建 | 未完成 | 后续继续安装和记录 |
-| CUDA/cuDNN | 本机不适合配置 | 本机为 Intel 显卡，不支持 NVIDIA CUDA |
+| Conda 环境搭建 | 未完成 | 本地 Conda 后续继续安装和记录 |
+| CUDA/cuDNN | 本机不适合配置 | 本机为 Intel Iris Xe 核显，不支持 NVIDIA CUDA |
+| 云端 GPU 环境 | 已完成初步测试 | 已使用 AutoDL RTX 4080 SUPER 测试 PyTorch GPU |
 | 计算机网络 | 已整理基础知识 | 已理解公网、局域网、子网划分、服务器直连传输思路 |
 | 科学上网 | 已完成本机与 WSL 代理配置 | WSL 可通过 7897 端口访问 GitHub |
 | Git 使用 | 已完成基础流程 | 已能创建本地仓库并推送到 GitHub |
@@ -1179,10 +1817,12 @@ cd ~/dl-learning-notes
 
 ---
 
-# 7. 后续学习计划
+# 8. 后续学习计划
 
 1. 继续完成 Linux 基础指令学习，补充权限、压缩解压、进程管理、环境变量等内容；
 2. 安装并学习 Conda，掌握虚拟环境创建、激活、删除和依赖管理；
 3. 在本地 CPU 环境下测试 Python 和 PyTorch 基础代码；
-4. 后续如果获得 GPU 服务器账号，学习 SSH 连接服务器、检查 GPU 状态和配置深度学习环境；
-5. 持续使用 Markdown 记录学习过程，并通过 Git 上传到 GitHub。
+4. 继续学习李沐《动手学深度学习》课程，优先理解张量、自动求导、线性回归、softmax 回归、多层感知机和卷积神经网络等基础内容；
+5. 对于需要 GPU 的代码，使用 AutoDL 云端 GPU 环境运行；
+6. 后续进一步学习 SSH 远程连接、VS Code Remote-SSH、云端代码管理和 GitHub 同步；
+7. 持续使用 Markdown 记录学习过程，并通过 Git 上传到 GitHub。
